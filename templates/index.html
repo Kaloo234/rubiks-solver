@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cube Rubik - Résolveur</title>
+    <script src="https://cdn.socket.io/4.0.1/socket.io.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            
+            text-align: center;
+            margin: 0;
+            background-color: white;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            margin: 5px;
+        }
+        .cube-container {
+            margin: 30px;
+        }
+        .moves {
+            width: 70%;
+            font-size: 16px;
+            overflow-y: auto;
+        }
+        .hole-cube {
+            display: grid;
+            grid-template-columns: repeat(4, 166px);
+            grid-template-rows: repeat(3, 166px);
+            gap: 5px;
+        }
+        .face {
+            display: grid;
+            grid-template-columns: repeat(3, 50px);
+            grid-template-rows: repeat(3, 50px);
+            gap: 5px;
+            background-color: black;
+            border: 3px solid black;
+        }
+        .tile {
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+        .tile:hover {
+            outline: 4px solid var(--hover-color);
+        }
+        .tile.UL { border-radius: 0px 0px 10px 0px; }
+        .tile.UC { border-radius: 0px 0px 10px 10px; }
+        .tile.UR { border-radius: 0px 0px 0px 10px; }
+        .tile.ML { border-radius: 0px 10px 10px 0px; }
+        .tile.MC { border-radius: 10px 10px 10px 10px; }
+        .tile.MR { border-radius: 10px 0px 0px 10px; }
+        .tile.DL { border-radius: 0px 10px 0px 0px; }
+        .tile.DC { border-radius: 10px 10px 0px 0px; }
+        .tile.DR { border-radius: 10px 0px 0px 0px; }
+        .controls {
+            position: relative;
+            display: flex;
+        }
+        .dropbtn {
+            cursor: pointer;
+        }
+        /*.dropbtn:hover, .dropbtn:focus {
+            change bg color
+        }*/
+        .controls-dropdown {
+            position: relative;
+            display: inline-block
+        }
+        .controls-content {
+            display: none;
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            margin-bottom: 10px;
+            margin: 0px;
+            background-color: #d7d7d7;
+            z-index: 1;
+            grid-template-columns: repeat(9, 56px);
+            grid-template-rows: repeat(6, 56px);
+            gap: 2px;
+            justify-content: center;
+        }
+        .controls-content button {
+            width: 50px;
+            height: 50px;
+            padding: 0px;
+        }
+        .show {
+            display: grid;
+        }
+        .colorButtons button {
+            width: 45px;
+            height: 45px;
+            display: inline;
+        }
+        .colorButtons button:hover {
+            color: white;
+            opacity: 30%;
+        }
+    </style>
+</head>
+<body>
+    <h1 id="title">Résolveur de Cube Rubik</h1>
+
+    <div class="cube-container">
+        <div class="hole-cube" id="hole-cube"></div>
+    </div>
+    
+    <p class="moves" id="moves"></p>
+
+    <div>
+        <button onclick="reset_cube()">Reset Cube</button>
+        <button onclick="previous_move()">Previous Move</button>
+        <button onclick="next_move()">Next Move</button>
+        <button onclick="solve_cube()">Résoudre le cube</button>
+        <button onclick="scramble_cube()">Mélanger le cube</button>
+    </div>
+
+    <div class="controls">
+        <div class="controls-dropdown">
+            <button onclick="open_controls()" class="dropbtn">Mouvements</button>
+            <div class="controls-content" id="controls-content">
+                <button onclick="execute_move('F', 'cw')">F</button>
+                <button onclick="execute_move('F2', 'cw')">F2</button>
+                <button onclick="execute_move('F', 'ac')">F'</button>
+                
+                <button onclick="execute_move('U', 'cw')">U</button>
+                <button onclick="execute_move('U2', 'cw')">U2</button>
+                <button onclick="execute_move('U', 'ac')">U'</button>
+
+                <button onclick="execute_move('D', 'cw')">D</button>
+                <button onclick="execute_move('D2', 'cw')">D2</button>
+                <button onclick="execute_move('D', 'ac')">D'</button>
+
+                <button onclick="execute_move('L', 'cw')">L</button>
+                <button onclick="execute_move('L2', 'cw')">L2</button>
+                <button onclick="execute_move('L', 'ac')">L'</button>
+
+                <button onclick="execute_move('R', 'cw')">R</button>
+                <button onclick="execute_move('R2', 'cw')">R2</button>
+                <button onclick="execute_move('R', 'ac')">R'</button>
+
+                <button onclick="execute_move('B', 'cw')">B</button>
+                <button onclick="execute_move('B2', 'cw')">B2</button>
+                <button onclick="execute_move('B', 'ac')">B'</button>
+
+                <button onclick="execute_move('M', 'cw')">M</button>
+                <button onclick="execute_move('M2', 'cw')">M2</button>
+                <button onclick="execute_move('M', 'ac')">M'</button>
+
+                <button onclick="execute_move('E', 'cw')">E</button>
+                <button onclick="execute_move('E2', 'cw')">E2</button>
+                <button onclick="execute_move('E', 'ac')">E'</button>
+
+                <button onclick="execute_move('S', 'cw')">S</button>
+                <button onclick="execute_move('S2', 'cw')">S2</button>
+                <button onclick="execute_move('S', 'ac')">S'</button>
+
+                <button onclick="execute_move('f', 'cw')">f</button>
+                <button onclick="execute_move('f2', 'cw')">f2</button>
+                <button onclick="execute_move('f', 'ac')">f'</button>
+                
+                <button onclick="execute_move('u', 'cw')">u</button>
+                <button onclick="execute_move('u2', 'cw')">u2</button>
+                <button onclick="execute_move('u', 'ac')">u'</button>
+
+                <button onclick="execute_move('d', 'cw')">d</button>
+                <button onclick="execute_move('d2', 'cw')">d2</button>
+                <button onclick="execute_move('d', 'ac')">d'</button>
+
+                <button onclick="execute_move('l', 'cw')">l</button>
+                <button onclick="execute_move('l2', 'cw')">l2</button>
+                <button onclick="execute_move('l', 'ac')">l'</button>
+
+                <button onclick="execute_move('r', 'cw')">r</button>
+                <button onclick="execute_move('r2', 'cw')">r2</button>
+                <button onclick="execute_move('r', 'ac')">r'</button>
+
+                <button onclick="execute_move('b', 'cw')">b</button>
+                <button onclick="execute_move('b2', 'cw')">b2</button>
+                <button onclick="execute_move('b', 'ac')">b'</button>
+
+                <button onclick="execute_move('x', 'cw')">x</button>
+                <button onclick="execute_move('x2', 'cw')">x2</button>
+                <button onclick="execute_move('x', 'ac')">x'</button>
+
+                <button onclick="execute_move('y', 'cw')">y</button>
+                <button onclick="execute_move('y2', 'cw')">y2</button>
+                <button onclick="execute_move('y', 'ac')">y'</button>
+
+                <button onclick="execute_move('z', 'cw')">z</button>
+                <button onclick="execute_move('z2', 'cw')">z2</button>
+                <button onclick="execute_move('z', 'ac')">z'</button>
+            </div>
+        </div>
+
+        <div class="colorButtons", id="colorButtons">
+            <button onclick="changeSelectedColor(0)" style="background-color: blue;"></button>
+            <button onclick="changeSelectedColor(1)" style="background-color: orange;"></button>
+            <button onclick="changeSelectedColor(2)" style="background-color: white;"></button>
+            <button onclick="changeSelectedColor(3)" style="background-color: red;"></button>
+            <button onclick="changeSelectedColor(4)" style="background-color: yellow;"></button>
+            <button onclick="changeSelectedColor(5)" style="background-color: green;"></button>
+        </div>
+    </div>
+
+    <div>
+        <input type="text", id="algo_bypass">
+        <button onclick="run_algo_bypass(document.getElementById('algo_bypass').value)">run algo</button>
+        <input type="text", id="save_cube">
+        <button onclick="save_cube(document.getElementById('save_cube').value)">save</button>
+        <input type="text", id="load_cube">
+        <button onclick="load_cube(document.getElementById('load_cube').value)">load</button>
+    </div>
+
+    <script>
+        let cube = [[[0,0,0],[0,0,0],[0,0,0]],
+                    [[1,1,1],[1,1,1],[1,1,1]],
+                    [[2,2,2],[2,2,2],[2,2,2]],
+                    [[3,3,3],[3,3,3],[3,3,3]],
+                    [[4,4,4],[4,4,4],[4,4,4]],
+                    [[5,5,5],[5,5,5],[5,5,5]]];
+
+        let selectedColor = 0
+        
+        const colors = {
+            null: null,
+            0: "blue",
+            1: "orange",
+            2: "white",
+            3: "red",
+            4: "yellow",
+            5: "green",
+        }
+        
+        const socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port, {
+            secure: true,
+            rejectUnauthorized: false,
+            transports: ["websocket"]
+        });
+
+        function save_cube(username) {
+            socket.emit('save_cube', {
+                username: username
+            })
+        }
+
+        function load_cube(username) {
+            socket.emit('load_cube', {
+                username: username
+            })
+        }
+
+        function open_controls() {
+            document.getElementById("controls-content").classList.toggle("show");
+        }
+
+        window.addEventListener('click', function(event) {
+            const dropdown = document.querySelector('.controls-dropdown');
+            if (!dropdown.contains(event.target)) {
+                document.getElementById("controls-content").classList.remove("show");
+            }
+        });
+
+        function changeSelectedColor(newColor) {
+            console.log(newColor, selectedColor)
+            let childs = document.getElementById('colorButtons').children;
+            [0,1,2,3,4,5].forEach(child => {
+                childs[child].style.filter = ""
+            });
+            if (newColor != selectedColor) {
+                childs[newColor].style.filter = "brightness(50%)";
+                selectedColor = newColor
+            }
+            else {
+                console.log("tex")
+                selectedColor = null;
+            };
+            document.documentElement.style.setProperty('--hover-color', colors[selectedColor]);
+        }
+
+        function enableColorChange() {
+            document.querySelectorAll(".tile").forEach(cell => {
+                cell.addEventListener("click", function() {
+                    //this.style.backgroundColor = selectedColor;
+
+                    // Met à jour la couleur dans le tableau cube
+                    if (selectedColor != null) {
+                        const faceIndex = this.parentElement.id;
+                        const cellIndex = this.id;
+                        const row = Math.floor(cellIndex / 3);
+                        const col = cellIndex % 3;
+                        if (faceIndex >= 0 && faceIndex < 6 && cellIndex != 4) {
+                            cube[faceIndex][row][col] = selectedColor;
+                        }
+                        console.log("(",faceIndex,",",row,",",col,")")
+                        cube_recolored()
+                    }
+                });
+            });
+        }
+
+        function renderCube() {
+            const pos = ["UL","UC","UR","ML","MC","MR","DL","DC","DR"];
+            const faceElement = document.getElementById("hole-cube");
+            faceElement.innerHTML = '';
+            faceElement.appendChild(document.createElement('div'));
+
+            const face0 = document.createElement('div');
+            face0.className = 'face';
+            face0.id = 0
+            faceElement.appendChild(face0);
+            let i=0
+            cube[0].forEach(row => {
+                row.forEach(color => {
+                    const colorDiv = document.createElement('div');
+                    colorDiv.className = 'tile ' + pos[i]
+                    colorDiv.style.backgroundColor = colors[color];
+                    colorDiv.id = i;
+                    face0.appendChild(colorDiv);
+                    i++
+                });
+            });
+
+            faceElement.appendChild(document.createElement('div'));
+            faceElement.appendChild(document.createElement('div'));
+
+            [1,2,3,4].forEach(face => {
+                const newFace = document.createElement('div');
+                newFace.className = 'face';
+                newFace.id = face
+                faceElement.appendChild(newFace);
+                let i=0
+                cube[face].forEach(row => {
+                    row.forEach(color => {
+                        const colorDiv = document.createElement('div');
+                        colorDiv.className = 'tile ' + pos[i]
+                        colorDiv.style.backgroundColor = colors[color];
+                        colorDiv.id = i
+                        newFace.appendChild(colorDiv)
+                        i++
+                    });
+                });
+            });
+
+            faceElement.appendChild(document.createElement('div'));
+
+            const face5 = document.createElement('div');
+            face5.className = 'face';
+            face5.id = 5
+            faceElement.appendChild(face5);
+            i=0
+            cube[5].forEach(row => {
+                row.forEach(color => {
+                    const colorDiv = document.createElement('div');
+                    colorDiv.className = 'tile ' + pos[i]
+                    colorDiv.style.backgroundColor = colors[color];
+                    colorDiv.id = i;
+                    face5.appendChild(colorDiv);
+                    i++
+                });
+            });
+
+            enableColorChange()
+        }
+
+        function run_algo_bypass(algo) {
+            socket.emit('run_algo_bypass', {
+                algo: algo
+            });
+        }
+
+        function execute_move(move, dir) {
+            if (dir == 'ac') {
+                move += "'"
+            }
+
+            socket.emit('execute_move', {
+                move: move,
+                cube: cube
+            });
+        }
+
+        function solve_cube() {
+            socket.emit('solve');
+        }
+
+        function cube_recolored() {
+            socket.emit('recolored', {
+                cube: cube
+            })
+        }
+
+        function scramble_cube() {
+            socket.emit('scramble');
+        }
+
+        function reset_cube() {
+            socket.emit('reset');
+        }
+
+        function next_move() {
+            socket.emit('next')
+        }
+
+        function previous_move() {
+            socket.emit('previous')
+        }
+
+        async function animate_cube(data) {
+            for (const state of data.cube_states) {
+                //console.log(state);
+                cube = state;
+                renderCube();
+                await new Promise(resolve => setTimeout(resolve, 10));
+            }
+            if (data.scrambled) {
+                cube = data.scrambled;
+                renderCube();
+            }
+        }
+
+        socket.on('connect', function() {
+            console.log("Connecté au serveur WebSocket");
+        });
+
+        socket.on('disconnect', function() {
+            console.log("Déconnecté du serveur WebSocket");
+        });
+
+        socket.on('update_cube', function(data) {
+            console.log("Mise à jour reçue :", data);
+            cube = data.cube;
+            renderCube();
+        });
+
+        socket.on('update_moves_list', function(data) {
+            console.log("Mise à jour reçue de mouvements :", data);
+            document.getElementById("moves").innerText=data.moves;
+        });
+
+        socket.on('response', (data) => {
+            console.log("test")
+            console.log(data)
+            if (data.cube) {
+                cube = data.cube;
+                renderCube();
+            }
+            if (data.cube_states) {
+                animate_cube(data)
+            }
+            if (data.message) {
+                alert(data.message);
+            }
+        });
+
+        changeSelectedColor(0);
+        renderCube();
+
+    </script>
+</body>
+</html>
