@@ -251,9 +251,9 @@ def append_moves(move, sid):
 if __name__ == '__main__':
     
     ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-    ssl_context.load_cert_chain(certfile="cert.pem", allow_unsafe_werkzeug=True, keyfile="key.pem")
+    ssl_context.load_cert_chain(certfile="cert.pem", keyfile="key.pem")
 
     try:
-        socketio.run(app, host="0.0.0.0", debug=True, port=5000, ssl_context=ssl_context)
+        socketio.run(app, host="0.0.0.0", debug=True, port=5000, allow_unsafe_werkzeug=True, ssl_context=ssl_context)
     except AssertionError:
         print("Une erreur d'écriture a été ignorée")
